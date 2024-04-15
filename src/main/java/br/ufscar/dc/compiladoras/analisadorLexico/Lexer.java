@@ -4,18 +4,20 @@ import java.io.*;
 import java.util.*;
 
 public class Lexer {
-    private BufferedReader reader;
+    private PushbackReader reader;
     private int currentChar;
     private boolean endOfFile = false;
 
     // Lista de palavras reservadas
     private static final Set<String> RESERVED_WORDS = new HashSet<>(Arrays.asList(
             "algoritmo", "declare", "leia", "escreva", "fim_algoritmo", "literal", "inteiro", "real",
-            "logico", "e", "ou", "nao", "se", "senao", "fim_se", "entao", "caso", "seja", "fim_caso"
+            "logico", "e", "ou", "nao", "se", "senao", "fim_se", "entao", "caso", "seja", "fim_caso",
+            "para", "ate", "faca", "fim_para", "enquanto", "fim_enquanto"
     ));
 
+
     public Lexer(String filePath) throws IOException {
-        reader = new BufferedReader(new FileReader(filePath));
+        reader = new PushbackReader(new FileReader(filePath), 2);  // Capacidade de empurrar de volta pode ser 2 para ".."
         advance();
     }
 
@@ -25,6 +27,7 @@ public class Lexer {
             endOfFile = true;
         }
     }
+
 
     public List<Token> tokenize() throws IOException {
         List<Token> tokens = new ArrayList<>();
@@ -52,10 +55,14 @@ public class Lexer {
                 } else if (currentOperator == '<' && currentChar == '-') {
                     tokens.add(new Token("<-", "<-"));
                     advance();
+                } else if (currentOperator == '<' && currentChar == '>') {
+                    tokens.add(new Token("<>", "<>"));
+                    advance();
                 } else {
                     tokens.add(new Token(String.valueOf(currentOperator), String.valueOf(currentOperator)));
                 }
-            } else if (currentChar == '=') {
+            }
+            else if (currentChar == '=') {
                 advance();
                 if (currentChar == '=') {
                     tokens.add(new Token("==", "=="));
@@ -93,24 +100,49 @@ public class Lexer {
 
     private Token number() throws IOException {
         StringBuilder builder = new StringBuilder();
-        while (Character.isDigit(currentChar)) {
-            builder.append((char) currentChar);
+        boolean isReal = false;
+        while (Character.isDigit(currentChar) || (currentChar == '.' && !isReal)) {
+            if (currentChar == '.') {
+                int lookahead = reader.read();
+                if (Character.isDigit(lookahead)) {
+                    // É um número real.
+                    builder.append((char) currentChar);
+                    builder.append((char) lookahead);
+                    isReal = true;
+                    advance();  // Atualiza currentChar após adicionar lookahead
+                } else {
+                    // Não é um número real, provavelmente um operador de intervalo.
+                    reader.unread(lookahead);  // Devolve lookahead para o stream
+                    break;
+                }
+            } else {
+                builder.append((char) currentChar);
+            }
             advance();
         }
-        return new Token("NUM_INT", builder.toString());
-    }
-
-    private Token handleDot() throws IOException {
-        advance(); // Avança após o primeiro '.'
-        if (currentChar == '.') {
-            advance(); // Avança após o segundo '.', confirmando que é um operador de intervalo
-            return new Token("..", "..");
+        if (isReal) {
+            return new Token("NUM_REAL", builder.toString());
         } else {
-            // Se não for um '..', então trate como um erro ou parte de um número real, conforme necessário
-            // Para simplificar, vamos assumir que esse caso não ocorrerá sem um dígito antes, então retornamos apenas um ponto
-            return new Token(".", ".");
+            return new Token("NUM_INT", builder.toString());
         }
     }
+
+
+
+
+
+    private Token handleDot() throws IOException {
+        advance();
+        if (currentChar == '.') {
+            advance();
+            return new Token("..", "..");
+        } else {
+            // Retorna erro porque '.' foi encontrado em um contexto que não esperávamos
+            return new Token("ERROR", "Unexpected '.'");
+        }
+    }
+
+
 
     private Token stringLiteral() throws IOException {
         StringBuilder builder = new StringBuilder();
