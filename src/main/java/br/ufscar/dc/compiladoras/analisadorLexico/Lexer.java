@@ -7,6 +7,14 @@ public class Lexer {
     private PushbackReader reader;
     private int currentChar;
     private boolean endOfFile = false;
+    private int lineNumber = 1;
+    private List<String> errors = new ArrayList<>();
+
+    public List<String> getErrors() {
+        return errors;
+    }
+
+
 
     // Lista de palavras reservadas
     private static final Set<String> RESERVED_WORDS = new HashSet<>(Arrays.asList(
@@ -24,10 +32,14 @@ public class Lexer {
 
     private void advance() throws IOException {
         currentChar = reader.read();
+        if (currentChar == '\n') {
+            lineNumber++;
+        }
         if (currentChar == -1) {
             endOfFile = true;
         }
     }
+
 
     public List<Token> tokenize() throws IOException {
         List<Token> tokens = new ArrayList<>();
@@ -55,7 +67,8 @@ public class Lexer {
             } else if (currentChar == '=') {
                 processEquals(tokens);
             } else {
-                advance();
+                errors.add("Linha " + lineNumber + ": " + (char) currentChar + " - simbolo nao identificado");
+                return tokens;
             }
         }
         return tokens;

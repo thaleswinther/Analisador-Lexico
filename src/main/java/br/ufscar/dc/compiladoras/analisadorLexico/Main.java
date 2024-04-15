@@ -20,7 +20,13 @@ public class Main {
             for (Token token : tokens) {
                 writer.println(token);
             }
+            if (!lexer.getErrors().isEmpty()) {
+                for (String error : lexer.getErrors()) {
+                    writer.println(error);
+                }
+            }
         }
+
     }
 }
 
