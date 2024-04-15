@@ -12,12 +12,13 @@ public class Lexer {
     private static final Set<String> RESERVED_WORDS = new HashSet<>(Arrays.asList(
             "algoritmo", "declare", "leia", "escreva", "fim_algoritmo", "literal", "inteiro", "real",
             "logico", "e", "ou", "nao", "se", "senao", "fim_se", "entao", "caso", "seja", "fim_caso",
-            "para", "ate", "faca", "fim_para", "enquanto", "fim_enquanto"
+            "para", "ate", "faca", "fim_para", "enquanto", "fim_enquanto", "registro", "fim_registro",
+            "tipo", "procedimento", "var", "fim_procedimento", "funcao", "retorne", "fim_funcao",
+            "constante", "falso", "verdadeiro"
     ));
 
-
     public Lexer(String filePath) throws IOException {
-        reader = new PushbackReader(new FileReader(filePath), 2);  // Capacidade de empurrar de volta pode ser 2 para ".."
+        reader = new PushbackReader(new FileReader(filePath), 2);  // Capacidade para ".."
         advance();
     }
 
@@ -27,7 +28,6 @@ public class Lexer {
             endOfFile = true;
         }
     }
-
 
     public List<Token> tokenize() throws IOException {
         List<Token> tokens = new ArrayList<>();
@@ -42,46 +42,51 @@ public class Lexer {
                 tokens.add(number());
             } else if (currentChar == '.') {
                 tokens.add(handleDot());
+                advance();
             } else if (currentChar == '"') {
                 tokens.add(stringLiteral());
             } else if (currentChar == '{') {
                 skipComment();
+            } else if ("+-*/(),;:%^&[]".indexOf(currentChar) != -1) {
+                tokens.add(new Token(String.valueOf((char) currentChar), String.valueOf((char) currentChar)));
+                advance();
             } else if (currentChar == '<' || currentChar == '>' || currentChar == '!') {
-                char currentOperator = (char) currentChar;
-                advance();
-                if (currentChar == '=' && (currentOperator == '>' || currentOperator == '<' || currentOperator == '!')) {
-                    tokens.add(new Token(currentOperator + "=", currentOperator + "="));
-                    advance();
-                } else if (currentOperator == '<' && currentChar == '-') {
-                    tokens.add(new Token("<-", "<-"));
-                    advance();
-                } else if (currentOperator == '<' && currentChar == '>') {
-                    tokens.add(new Token("<>", "<>"));
-                    advance();
-                } else {
-                    tokens.add(new Token(String.valueOf(currentOperator), String.valueOf(currentOperator)));
-                }
-            }
-            else if (currentChar == '=') {
-                advance();
-                if (currentChar == '=') {
-                    tokens.add(new Token("==", "=="));
-                    advance();
-                } else {
-                    tokens.add(new Token("=", "="));
-                }
-            } else if ("+-*/(),;:".indexOf(currentChar) != -1) {
-                if (currentChar == '-' && !tokens.isEmpty() && tokens.get(tokens.size() - 1).getValue().equals("<")) {
-                    tokens.remove(tokens.size() - 1);  // Remove the '<' token
-                    tokens.add(new Token("<-", "<-"));  // Add '<-' token
-                } else {
-                    tokens.add(new Token(String.valueOf((char) currentChar), String.valueOf((char) currentChar)));
-                }
+                processComparisonOperators(tokens);
+            } else if (currentChar == '=') {
+                processEquals(tokens);
+            } else {
                 advance();
             }
-
         }
         return tokens;
+    }
+
+
+    private void processComparisonOperators(List<Token> tokens) throws IOException {
+        char currentOperator = (char) currentChar;
+        advance();
+        if (currentChar == '=' && (currentOperator == '>' || currentOperator == '<' || currentOperator == '!')) {
+            tokens.add(new Token(currentOperator + "=", currentOperator + "="));
+            advance();
+        } else if (currentOperator == '<' && currentChar == '-') {
+            tokens.add(new Token("<-", "<-"));
+            advance();
+        } else if (currentOperator == '<' && currentChar == '>') {
+            tokens.add(new Token("<>", "<>"));
+            advance();
+        } else {
+            tokens.add(new Token(String.valueOf(currentOperator), String.valueOf(currentOperator)));
+        }
+    }
+
+    private void processEquals(List<Token> tokens) throws IOException {
+        advance();
+        if (currentChar == '=') {
+            tokens.add(new Token("==", "=="));
+            advance();
+        } else {
+            tokens.add(new Token("=", "="));
+        }
     }
 
     private Token word() throws IOException {
@@ -105,13 +110,11 @@ public class Lexer {
             if (currentChar == '.') {
                 int lookahead = reader.read();
                 if (Character.isDigit(lookahead)) {
-                    // É um número real.
                     builder.append((char) currentChar);
                     builder.append((char) lookahead);
                     isReal = true;
                     advance();  // Atualiza currentChar após adicionar lookahead
                 } else {
-                    // Não é um número real, provavelmente um operador de intervalo.
                     reader.unread(lookahead);  // Devolve lookahead para o stream
                     break;
                 }
@@ -127,10 +130,6 @@ public class Lexer {
         }
     }
 
-
-
-
-
     private Token handleDot() throws IOException {
         advance();
         if (currentChar == '.') {
@@ -138,15 +137,23 @@ public class Lexer {
             return new Token("..", "..");
         } else {
             // Retorna erro porque '.' foi encontrado em um contexto que não esperávamos
-            return new Token("ERROR", "Unexpected '.'");
+            reader.unread(currentChar);
+            return new Token(".", ".");
         }
     }
 
-
+    private void skipComment() throws IOException {
+        while (currentChar != '}' && !endOfFile) {
+            advance();
+        }
+        if (currentChar == '}') {
+            advance(); // Move past the closing brace.
+        }
+    }
 
     private Token stringLiteral() throws IOException {
         StringBuilder builder = new StringBuilder();
-        advance(); // Start after the initial double quote
+        advance(); // Começa depois da aspa inicial
         while (currentChar != '"' && !endOfFile) {
             builder.append((char) currentChar);
             advance();
@@ -155,12 +162,4 @@ public class Lexer {
         return new Token("CADEIA", "\"" + builder.toString() + "\"");
     }
 
-    private void skipComment() throws IOException {
-        while (currentChar != '}' && !endOfFile) {
-            advance();
-        }
-        if (currentChar == '}') {
-            advance(); // Skip the closing brace
-        }
-    }
 }
