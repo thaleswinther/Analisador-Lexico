@@ -1,4 +1,4 @@
-package br.ufscar.dc.compiladoras.analisadorLexico;
+package br.ufscar.dc.compiladores.analisadorLexico;
 
 import java.io.*;
 import java.util.*;
@@ -121,22 +121,27 @@ public class Lexer {
     private Token number() throws IOException {
         StringBuilder builder = new StringBuilder();
         boolean isReal = false;
-        while (Character.isDigit(currentChar) || (currentChar == '.' && !isReal)) {
+        while (Character.isDigit(currentChar)) {
+            builder.append((char) currentChar);
+            advance();
             if (currentChar == '.') {
                 int lookahead = reader.read();
                 if (Character.isDigit(lookahead)) {
-                    builder.append((char) currentChar);
-                    builder.append((char) lookahead);
+                    // Trata como número real
                     isReal = true;
-                    advance();  // Atualiza currentChar após adicionar lookahead
+                    builder.append('.');
+                    builder.append((char) lookahead);
+                    advance();
+                } else if (lookahead == '.') {
+                    // Operador de intervalo ".."
+                    reader.unread(lookahead); // Devolve o segundo '.'
+                    break; // Sai do loop, pois trata-se de um operador de intervalo
                 } else {
-                    reader.unread(lookahead);  // Devolve lookahead para o stream
+                    // Não é um número real nem um operador de intervalo
+                    reader.unread(lookahead);
                     break;
                 }
-            } else {
-                builder.append((char) currentChar);
             }
-            advance();
         }
         if (isReal) {
             return new Token("NUM_REAL", builder.toString());
@@ -147,15 +152,14 @@ public class Lexer {
     private Token handleDot() throws IOException {
         advance();
         if (currentChar == '.') {
-            advance();
+            // Confirma que é o operador ".."
             return new Token("..", "..");
         } else {
-            // Retorna erro porque '.' foi encontrado em um contexto que não esperávamos
-            reader.unread(currentChar);
+            // Não é um operador de intervalo, trata-se apenas de um ponto.
+            reader.unread(currentChar); // Devolve o caracter que não faz parte do operador de intervalo
             return new Token(".", ".");
         }
     }
-
     private void skipComment() throws IOException {
         int depth = 1; // Start with a depth of 1 because we're already in a comment
         int startLine = lineNumber;

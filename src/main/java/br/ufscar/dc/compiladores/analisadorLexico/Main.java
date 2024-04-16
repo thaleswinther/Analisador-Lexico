@@ -1,4 +1,4 @@
-package br.ufscar.dc.compiladoras.analisadorLexico;
+package br.ufscar.dc.compiladores.analisadorLexico;
 
 import java.io.*;
 import java.util.*;

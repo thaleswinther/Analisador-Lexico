@@ -1,4 +1,4 @@
-package br.ufscar.dc.compiladoras.analisadorLexico;
+package br.ufscar.dc.compiladores.analisadorLexico;
 
 public class Token {
     private String type;
