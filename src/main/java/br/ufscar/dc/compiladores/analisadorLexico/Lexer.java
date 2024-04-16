@@ -1,3 +1,16 @@
+/*
+
+Trabalho 1 - CONSTRUÇÃO DE COMPILADORES
+
+Integrantes do Grupo:
+Arisa Abiko Sakaguti - 800357,
+Matheus Ranzani - 800278,
+Thales Winther - 802499
+
+*/
+
+
+
 package br.ufscar.dc.compiladores.analisadorLexico;
 
 import java.io.*;
@@ -28,6 +41,8 @@ public class Lexer {
         advance();
     }
 
+
+    // Avança para o próximo caractere no fluxo de entrada.
     private void advance() throws IOException {
         currentChar = reader.read();
         if (currentChar == '\n') {
@@ -38,6 +53,12 @@ public class Lexer {
         }
     }
 
+    /*
+     * Analisa o arquivo de entrada e identifica os tokens conforme as regras léxicas.
+     * A função retorna uma lista de tokens identificados ou termina a execução se encontrar erros fatais.
+     * retorna a Lista de tokens identificados.
+     *
+     */
     public List<Token> tokenize() throws IOException {
         List<Token> tokens = new ArrayList<>();
         while (!endOfFile) {
@@ -80,6 +101,12 @@ public class Lexer {
         }
         return tokens;
     }
+
+     /*
+     Processa operadores de comparação (<, >, !=, <=, >=, <>).
+     A função lê um operador inicial e verifica o próximo caractere para determinar
+     se forma um operador composto. Os tokens são adicionados à lista de tokens.
+     */
     private void processComparisonOperators(List<Token> tokens) throws IOException {
         char currentOperator = (char) currentChar;
         advance();
@@ -96,6 +123,8 @@ public class Lexer {
             tokens.add(new Token(String.valueOf(currentOperator), String.valueOf(currentOperator)));
         }
     }
+
+    // Processa o operador de igualdade (=) e o operador de comparação de igualdade (==).
     private void processEquals(List<Token> tokens) throws IOException {
         advance();
         if (currentChar == '=') {
@@ -105,6 +134,8 @@ public class Lexer {
             tokens.add(new Token("=", "="));
         }
     }
+
+    // Reconhece palavras no fluxo de entrada e determina se são palavras reservadas ou identificadores.
     private Token word() throws IOException {
         StringBuilder builder = new StringBuilder();
         while (Character.isLetterOrDigit(currentChar) || currentChar == '_') {
@@ -118,6 +149,8 @@ public class Lexer {
             return new Token("IDENT", word); // Treat as identifier
         }
     }
+
+    // Reconhece números inteiros ou reais. Trata casos onde um ponto é parte de um número real ou um operador de intervalo.
     private Token number() throws IOException {
         StringBuilder builder = new StringBuilder();
         boolean isReal = false;
@@ -149,6 +182,9 @@ public class Lexer {
             return new Token("NUM_INT", builder.toString());
         }
     }
+
+    // Trata o ponto como um operador de intervalo ".." ou como um ponto singular.
+    // Se o ponto é seguido por outro ponto, trata como operador de intervalo ".."
     private Token handleDot() throws IOException {
         advance();
         if (currentChar == '.') {
@@ -160,6 +196,9 @@ public class Lexer {
             return new Token(".", ".");
         }
     }
+
+    // Ignora comentários delimitados por chaves {}. Conta o aninhamento de chaves para garantir
+    // que todos os comentários sejam fechados corretamente.
     private void skipComment() throws IOException {
         int depth = 1; // Start with a depth of 1 because we're already in a comment
         int startLine = lineNumber;
@@ -175,11 +214,13 @@ public class Lexer {
                 advance();
             }
         }
-
-        if (depth > 0 && endOfFile) {
+        if (depth > 0) {
             errors.add("Linha " + startLine + ": comentario nao fechado");
         }
     }
+
+    // Reconhece e processa cadeias literais delimitadas por aspas duplas.
+    // Se a cadeia não for fechada antes de uma quebra de linha ou fim de arquivo, registra um erro.
     private Token stringLiteral() throws IOException {
         StringBuilder builder = new StringBuilder();
         advance(); // Começa depois da aspa inicial
@@ -198,5 +239,4 @@ public class Lexer {
         }
         return null; // Em caso de EOF antes de uma aspa de fechamento
     }
-
 }

@@ -1,3 +1,14 @@
+/*
+
+Trabalho 1 - CONSTRUÇÃO DE COMPILADORES
+
+Integrantes do Grupo:
+Arisa Abiko Sakaguti - 800357,
+Matheus Ranzani - 800278,
+Thales Winther - 802499
+
+*/
+
 package br.ufscar.dc.compiladores.analisadorLexico;
 
 import java.io.*;
@@ -26,7 +37,6 @@ public class Main {
                 }
             }
         }
-
     }
 }
 
