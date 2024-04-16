@@ -47,8 +47,9 @@ public class Lexer {
             while (Character.isWhitespace(currentChar)) {
                 advance();
             }
-
-            if (Character.isLetter(currentChar)) {
+            if (endOfFile)  {
+                break;
+            } else if (Character.isLetter(currentChar)) {
                 tokens.add(word());
             } else if (Character.isDigit(currentChar)) {
                 tokens.add(number());
@@ -56,7 +57,13 @@ public class Lexer {
                 tokens.add(handleDot());
                 advance();
             } else if (currentChar == '"') {
-                tokens.add(stringLiteral());
+                Token strToken = stringLiteral();
+                if (strToken != null) {
+                    tokens.add(strToken);
+                }
+                if (endOfFile && !errors.isEmpty()) {
+                    return tokens; // Parar se um erro fatal foi encontrado
+                }
             } else if (currentChar == '{') {
                 skipComment();
             } else if ("+-*/(),;:%^&[]".indexOf(currentChar) != -1) {
@@ -68,11 +75,12 @@ public class Lexer {
                 processEquals(tokens);
             } else {
                 errors.add("Linha " + lineNumber + ": " + (char) currentChar + " - simbolo nao identificado");
-                return tokens;
+                break; // Interrompe o processamento se um erro não reconhecido ocorrer
             }
         }
         return tokens;
     }
+
 
 
     private void processComparisonOperators(List<Token> tokens) throws IOException {
@@ -168,11 +176,19 @@ public class Lexer {
         StringBuilder builder = new StringBuilder();
         advance(); // Começa depois da aspa inicial
         while (currentChar != '"' && !endOfFile) {
+            if (currentChar == '\n' || currentChar == -1) { // Verifica nova linha ou EOF
+                errors.add("Linha " + (lineNumber-1) + ": cadeia literal nao fechada");
+                endOfFile = true; // Seta endOfFile para verdadeiro para parar o processamento
+                return null; // Não adiciona o token se houver um erro
+            }
             builder.append((char) currentChar);
             advance();
         }
-        advance(); // Move past the closing quote
-        return new Token("CADEIA", "\"" + builder.toString() + "\"");
+        if (currentChar == '"') {
+            advance(); // Pula a aspa de fechamento
+            return new Token("CADEIA", "\"" + builder.toString() + "\"");
+        }
+        return null; // Em caso de EOF antes de uma aspa de fechamento
     }
 
 }
