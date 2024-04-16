@@ -14,8 +14,6 @@ public class Lexer {
         return errors;
     }
 
-
-
     // Lista de palavras reservadas
     private static final Set<String> RESERVED_WORDS = new HashSet<>(Arrays.asList(
             "algoritmo", "declare", "leia", "escreva", "fim_algoritmo", "literal", "inteiro", "real",
@@ -39,7 +37,6 @@ public class Lexer {
             endOfFile = true;
         }
     }
-
 
     public List<Token> tokenize() throws IOException {
         List<Token> tokens = new ArrayList<>();
@@ -66,6 +63,9 @@ public class Lexer {
                 }
             } else if (currentChar == '{') {
                 skipComment();
+                if (!errors.isEmpty()) {
+                    break;
+                }
             } else if ("+-*/(),;:%^&[]".indexOf(currentChar) != -1) {
                 tokens.add(new Token(String.valueOf((char) currentChar), String.valueOf((char) currentChar)));
                 advance();
@@ -80,9 +80,6 @@ public class Lexer {
         }
         return tokens;
     }
-
-
-
     private void processComparisonOperators(List<Token> tokens) throws IOException {
         char currentOperator = (char) currentChar;
         advance();
@@ -99,7 +96,6 @@ public class Lexer {
             tokens.add(new Token(String.valueOf(currentOperator), String.valueOf(currentOperator)));
         }
     }
-
     private void processEquals(List<Token> tokens) throws IOException {
         advance();
         if (currentChar == '=') {
@@ -109,7 +105,6 @@ public class Lexer {
             tokens.add(new Token("=", "="));
         }
     }
-
     private Token word() throws IOException {
         StringBuilder builder = new StringBuilder();
         while (Character.isLetterOrDigit(currentChar) || currentChar == '_') {
@@ -123,7 +118,6 @@ public class Lexer {
             return new Token("IDENT", word); // Treat as identifier
         }
     }
-
     private Token number() throws IOException {
         StringBuilder builder = new StringBuilder();
         boolean isReal = false;
@@ -150,7 +144,6 @@ public class Lexer {
             return new Token("NUM_INT", builder.toString());
         }
     }
-
     private Token handleDot() throws IOException {
         advance();
         if (currentChar == '.') {
@@ -164,14 +157,25 @@ public class Lexer {
     }
 
     private void skipComment() throws IOException {
-        while (currentChar != '}' && !endOfFile) {
+        int depth = 1; // Start with a depth of 1 because we're already in a comment
+        int startLine = lineNumber;
+
+        while (depth > 0 && !endOfFile) {
             advance();
+
+            if (currentChar == '{') {
+                depth++;
+                advance();
+            } else if (currentChar == '}') {
+                depth--;
+                advance();
+            }
         }
-        if (currentChar == '}') {
-            advance(); // Move past the closing brace.
+
+        if (depth > 0 && endOfFile) {
+            errors.add("Linha " + startLine + ": comentario nao fechado");
         }
     }
-
     private Token stringLiteral() throws IOException {
         StringBuilder builder = new StringBuilder();
         advance(); // Começa depois da aspa inicial
